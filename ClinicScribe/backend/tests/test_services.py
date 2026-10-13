@@ -42,6 +42,17 @@ def test_parse_note_clamps_sources_and_strips_fences():
     assert "reviewed" in note["disclaimer"]
 
 
+def test_prompt_example_has_no_placeholder_text():
+    # Small models copy example text into the note, so the example must be empty.
+    from app.services.summarize import SCHEMA_HINT, build_user_prompt
+
+    for name, value in SCHEMA_HINT.items():
+        entries = value if isinstance(value, list) else [value]
+        assert all(e["text"] == "" and e["sources"] == [] for e in entries), name
+    prompt = build_user_prompt([{"text": "hello"}])
+    assert "[0] hello" in prompt and "subjective: what the patient reports" in prompt
+
+
 def test_parse_note_rejects_non_object():
     with pytest.raises(ValueError):
         parse_note("[1, 2]", 1)

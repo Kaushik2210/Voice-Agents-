@@ -26,20 +26,31 @@ SYSTEM_PROMPT = (
     "Respond with JSON only."
 )
 
+# Empty values on purpose: placeholder text in the example gets copied into the
+# note by smaller models, so the section guidance lives in prose instead.
 SCHEMA_HINT = {
-    "subjective": {"text": "patient-reported symptoms and history", "sources": [0]},
-    "objective": {"text": "examination findings, vitals, results mentioned", "sources": []},
-    "assessment": {"text": "clinician's stated impression", "sources": []},
-    "plan": {"text": "treatment, prescriptions, follow-up stated", "sources": []},
-    "action_items": [{"text": "concrete task for patient or staff", "sources": [0]}],
+    **{name: {"text": "", "sources": []} for name in SECTIONS},
+    "action_items": [{"text": "", "sources": []}],
 }
+
+SECTION_GUIDE = (
+    "subjective: what the patient reports (symptoms, duration, history, allergies, "
+    "medicines already taken).\n"
+    "objective: what the clinician measured or observed (vitals, examination, results).\n"
+    "assessment: the clinician's stated impression or diagnosis.\n"
+    "plan: treatment, prescriptions, advice and follow-up the clinician gave.\n"
+    "action_items: concrete follow-up tasks for the patient or staff."
+)
 
 
 def build_user_prompt(segments: list[dict]) -> str:
     lines = "\n".join(f"[{i}] {s['text']}" for i, s in enumerate(segments))
     return (
-        "Return JSON with exactly this shape (sources are segment numbers in "
-        f"square brackets):\n{json.dumps(SCHEMA_HINT)}\n\nTranscript:\n{lines}"
+        f"Section guide:\n{SECTION_GUIDE}\n\n"
+        "Fill in the JSON below. Write each section's text as short sentences that "
+        "state what was actually said, and set sources to the segment numbers in "
+        "square brackets that support it. Do not repeat the section guide.\n"
+        f"{json.dumps(SCHEMA_HINT)}\n\nTranscript:\n{lines}"
     )
 
 
