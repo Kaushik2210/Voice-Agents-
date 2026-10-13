@@ -1,0 +1,12 @@
+.env
+data/
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+node_modules/
+dist/
+*.wav
+*.mp3
+*.m4a
+*.webm
