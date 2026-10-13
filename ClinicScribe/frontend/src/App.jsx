@@ -82,6 +82,8 @@ function Detail({ id, onDeleted }) {
   const [c, setC] = useState(null);
   const [drafts, setDrafts] = useState({});
   const [active, setActive] = useState(new Set());
+  const [lists, setLists] = useState({}); // edited allergies / medications, one entry per line
+  const [ack, setAck] = useState(false);
   const [error, setError] = useState("");
 
   const load = useCallback(() => api.get(id).then(setC).catch((e) => setError(e.message)), [id]);
@@ -89,6 +91,8 @@ function Detail({ id, onDeleted }) {
   useEffect(() => {
     setC(null);
     setDrafts({});
+    setLists({});
+    setAck(false);
     setActive(new Set());
     load();
   }, [load]);
@@ -104,7 +108,11 @@ function Detail({ id, onDeleted }) {
   if (!c) return <p>Loading…</p>;
 
   const editable = c.status === "ready";
-  const dirty = Object.keys(drafts).length > 0;
+  const dirty = Object.keys(drafts).length > 0 || Object.keys(lists).length > 0;
+  const flags = c.note?.flags || [];
+  const needsAck = flags.length > 0;
+  const listText = (key) => lists[key] ?? (c.note?.[key] || []).map((e) => e.text).join("\n");
+  const toLines = (value) => value.split("\n").map((s) => s.trim()).filter(Boolean);
 
   async function run(fn) {
     setError("");
@@ -116,10 +124,13 @@ function Detail({ id, onDeleted }) {
   }
 
   const save = () => run(async () => {
-    setC(await api.edit(id, drafts));
+    const changes = { sections: drafts };
+    for (const key of Object.keys(lists)) changes[key] = toLines(lists[key]);
+    setC(await api.edit(id, changes));
     setDrafts({});
+    setLists({});
   });
-  const approve = () => run(async () => setC(await api.approve(id)));
+  const approve = () => run(async () => setC(await api.approve(id, ack)));
   const remove = () => run(async () => {
     if (!window.confirm("Delete this consultation permanently?")) return;
     await api.remove(id);
@@ -146,6 +157,33 @@ function Detail({ id, onDeleted }) {
       {c.note && (
         <section className="note">
           <p className="disclaimer">{c.note.disclaimer}</p>
+          {flags.map((flag) => (
+            <p key={flag} className="flag" role="alert">{flag}</p>
+          ))}
+          <div className="safety">
+            {[
+              ["allergies", "Allergies"],
+              ["medications", "Current medications"],
+            ].map(([key, label]) => (
+              <div key={key} className="section">
+                <h3>{label} <small>(one per line)</small></h3>
+                <textarea
+                  disabled={!editable}
+                  value={listText(key)}
+                  placeholder="None stated"
+                  onChange={(e) => setLists({ ...lists, [key]: e.target.value })}
+                  rows={2}
+                />
+                <div className="sources">
+                  {[...new Set((c.note[key] || []).flatMap((e) => e.sources))].map((i) => (
+                    <button key={i} type="button" className="chip" onClick={() => setActive(new Set([i]))}>
+                      {fmt(c.segments[i]?.start) || `#${i}`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
           {SECTIONS.map((name) => {
             const sec = c.note.sections[name];
             return (
@@ -167,6 +205,12 @@ function Detail({ id, onDeleted }) {
               </div>
             );
           })}
+          {editable && needsAck && (
+            <label className="check">
+              <input type="checkbox" checked={ack} onChange={(e) => setAck(e.target.checked)} />
+              I have checked the flagged items above against the transcript.
+            </label>
+          )}
           {c.note.action_items.length > 0 && (
             <div className="section">
               <h3>Action items</h3>
@@ -179,7 +223,11 @@ function Detail({ id, onDeleted }) {
           )}
           <div className="actions">
             {editable && <button onClick={save} disabled={!dirty}>Save edits</button>}
-            {editable && <button className="primary" onClick={approve} disabled={dirty}>Approve note</button>}
+            {editable && (
+              <button className="primary" onClick={approve} disabled={dirty || (needsAck && !ack)}>
+                Approve note
+              </button>
+            )}
             <button onClick={download}>Export Markdown</button>
             <button className="danger" onClick={remove}>Delete</button>
           </div>

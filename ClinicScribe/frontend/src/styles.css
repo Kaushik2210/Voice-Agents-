@@ -41,6 +41,8 @@ button.danger { color: var(--bad); }
 .detail { display: grid; gap: 16px; }
 .detail > header { display: flex; align-items: center; gap: 10px; }
 .disclaimer { margin: 0 0 12px; padding: 8px 10px; border-left: 3px solid var(--warn); background: var(--bg); color: var(--muted); font-size: 13px; }
+.flag { margin: 0 0 12px; padding: 8px 10px; border: 1px solid var(--bad); border-left-width: 4px; border-radius: 6px; color: var(--bad); font-weight: 600; }
+.safety { padding: 10px 12px 0; margin-bottom: 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
 .section { margin-bottom: 14px; }
 .sources { display: flex; gap: 6px; margin-top: 4px; flex-wrap: wrap; }
 .chip { padding: 1px 8px; font-size: 12px; border-radius: 999px; }

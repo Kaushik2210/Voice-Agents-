@@ -45,13 +45,15 @@ export const api = {
   list: () => json("/api/consultations"),
   get: (id) => json(`/api/consultations/${id}`),
   create: (form) => json("/api/consultations", { method: "POST", body: form }),
-  edit: (id, sections) =>
+  // changes: { sections?: {name: text}, allergies?: string[], medications?: string[] }
+  edit: (id, changes) =>
     json(`/api/consultations/${id}/note`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sections }),
+      body: JSON.stringify(changes),
     }),
-  approve: (id) => json(`/api/consultations/${id}/approve`, { method: "POST" }),
+  approve: (id, acknowledged = false) =>
+    json(`/api/consultations/${id}/approve?acknowledged=${acknowledged}`, { method: "POST" }),
   remove: (id) => request(`/api/consultations/${id}`, { method: "DELETE" }),
   exportMarkdown: (id) => text(`/api/consultations/${id}/export.md`),
 };
