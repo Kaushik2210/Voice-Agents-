@@ -3,8 +3,85 @@ import json
 import pytest
 
 from app.services.redact import redact
+from app.services.safety import MISSING_FLAG, ensure_allergies
 from app.services.summarize import parse_note
 from app.services.transcribe import normalise
+
+# Real transcript from the end-to-end run in which the model dropped the allergy.
+CONSULT = [
+    {"text": "Good morning."},
+    {"text": "I have had a fever and a sore throat for three days."},
+    {"text": "Are you allergic to any medicines?"},
+    {"text": "Yes, I am allergic to penicillin."},
+    {"text": "I will prescribe paracetamol 500 mg three times a day."},
+]
+
+
+def _empty_note():
+    return parse_note("{}", len(CONSULT))
+
+
+def test_dropped_allergy_is_added_verbatim_and_flagged():
+    note = ensure_allergies(_empty_note(), CONSULT)
+    # One entry: the clinician's question joined with the patient's answer.
+    assert len(note["allergies"]) == 1
+    entry = note["allergies"][0]
+    assert "allergic to penicillin" in entry["text"] and entry["verbatim"]
+    assert entry["sources"] == [2, 3]
+    assert MISSING_FLAG in note["flags"]
+
+
+def test_answer_without_the_word_allergy_is_still_captured():
+    segs = [{"text": "Are you allergic to anything?"}, {"text": "Penicillin."}]
+    note = ensure_allergies(parse_note("{}", 2), segs)
+    assert "Penicillin." in note["allergies"][0]["text"]
+
+
+def test_cited_allergy_is_not_duplicated_or_flagged():
+    note = _empty_note()
+    note["allergies"] = [{"text": "Penicillin", "sources": [3]}]
+    ensure_allergies(note, CONSULT)
+    assert len(note["allergies"]) == 1 and note["flags"] == []
+
+
+def test_uncited_allergy_gets_its_citation_without_a_flag():
+    note = _empty_note()
+    note["allergies"] = [{"text": "Allergic to penicillin", "sources": []}]
+    ensure_allergies(note, CONSULT)
+    assert 3 in note["allergies"][0]["sources"]
+    assert len(note["allergies"]) == 1 and note["flags"] == []
+
+
+def test_no_allergy_mention_adds_nothing():
+    note = ensure_allergies(_empty_note(), [{"text": "Fever for two days."}])
+    assert note["allergies"] == [] and note["flags"] == []
+
+
+def test_negative_allergy_statement_is_kept():
+    segs = [{"text": "No known drug allergies."}]
+    note = ensure_allergies(parse_note("{}", 1), segs)
+    assert note["allergies"][0]["text"] == "No known drug allergies."
+
+
+def test_uncited_none_mentioned_filler_is_dropped_but_cited_statement_kept():
+    reply = json.dumps({
+        "medications": [{"text": "Currently taking/has taken none mentioned", "sources": []}],
+        "allergies": [{"text": "No known drug allergies", "sources": [1]}],
+    })
+    note = parse_note(reply, len(CONSULT))
+    assert note["medications"] == []
+    assert note["allergies"][0]["text"] == "No known drug allergies"
+
+
+def test_parse_note_reads_allergies_and_medications():
+    reply = json.dumps({
+        "allergies": [{"text": "Penicillin", "sources": [3, 99]}],
+        "medications": ["Metformin 500 mg"],
+    })
+    note = parse_note(reply, len(CONSULT))
+    assert note["allergies"] == [{"text": "Penicillin", "sources": [3]}]
+    assert note["medications"][0]["text"] == "Metformin 500 mg"
+    assert note["flags"] == []
 
 
 def test_redact_masks_structured_identifiers():

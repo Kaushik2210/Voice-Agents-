@@ -10,6 +10,7 @@ import re
 import httpx
 
 from ..config import settings
+from .safety import ensure_allergies
 
 SECTIONS = ["subjective", "objective", "assessment", "plan"]
 
@@ -30,15 +31,19 @@ SYSTEM_PROMPT = (
 # note by smaller models, so the section guidance lives in prose instead.
 SCHEMA_HINT = {
     **{name: {"text": "", "sources": []} for name in SECTIONS},
+    "allergies": [{"text": "", "sources": []}],
+    "medications": [{"text": "", "sources": []}],
     "action_items": [{"text": "", "sources": []}],
 }
 
 SECTION_GUIDE = (
-    "subjective: what the patient reports (symptoms, duration, history, allergies, "
-    "medicines already taken).\n"
+    "subjective: what the patient reports (symptoms, duration, history).\n"
     "objective: what the clinician measured or observed (vitals, examination, results).\n"
     "assessment: the clinician's stated impression or diagnosis.\n"
     "plan: treatment, prescriptions, advice and follow-up the clinician gave.\n"
+    "allergies: every drug, food or other allergy or adverse reaction the patient "
+    "mentions, one entry each. Never leave this empty if an allergy was mentioned.\n"
+    "medications: every medicine the patient says they currently take or took.\n"
     "action_items: concrete follow-up tasks for the patient or staff."
 )
 
@@ -52,6 +57,12 @@ def build_user_prompt(segments: list[dict]) -> str:
         "square brackets that support it. Do not repeat the section guide.\n"
         f"{json.dumps(SCHEMA_HINT)}\n\nTranscript:\n{lines}"
     )
+
+
+_NOTHING_RE = re.compile(
+    r"\bnone\b|\bn/?a\b|\bnot (?:mentioned|discussed|stated|specified)\b|\bnothing\b",
+    re.IGNORECASE,
+)
 
 
 def _clean_sources(raw, n_segments: int) -> list[int]:
@@ -76,15 +87,28 @@ def parse_note(raw: str, n_segments: int) -> dict:
     if not isinstance(data, dict):
         raise ValueError("model did not return a JSON object")
 
-    items = []
-    for item in data.get("action_items") or []:
-        section = _section(item, n_segments)
-        if section["text"] != "Not discussed":
-            items.append(section)
+    def entries(key: str) -> list[dict]:
+        raw_items = data.get(key) or []
+        if not isinstance(raw_items, list):
+            raw_items = [raw_items]
+        out = []
+        for item in raw_items:
+            section = _section(item, n_segments)
+            if section["text"] == "Not discussed":
+                continue
+            # "None mentioned" with no citation is the model filling space, not a
+            # finding. A cited "No known allergies" is kept: that is a real statement.
+            if not section["sources"] and _NOTHING_RE.search(section["text"]):
+                continue
+            out.append(section)
+        return out
 
     return {
         "sections": {name: _section(data.get(name), n_segments) for name in SECTIONS},
-        "action_items": items,
+        "allergies": entries("allergies"),
+        "medications": entries("medications"),
+        "action_items": entries("action_items"),
+        "flags": [],
         "disclaimer": DISCLAIMER,
     }
 
@@ -104,4 +128,5 @@ async def summarize(segments: list[dict]) -> dict:
     async with httpx.AsyncClient(timeout=settings.llm_timeout_s) as client:
         resp = await client.post(url, json=payload)
     resp.raise_for_status()
-    return parse_note(resp.json()["message"]["content"], len(segments))
+    note = parse_note(resp.json()["message"]["content"], len(segments))
+    return ensure_allergies(note, segments)
