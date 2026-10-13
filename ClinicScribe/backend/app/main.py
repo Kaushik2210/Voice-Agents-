@@ -2,6 +2,7 @@ import asyncio
 import hmac
 import logging
 from contextlib import asynccontextmanager
+from datetime import timedelta, timezone
 from pathlib import Path
 from uuid import uuid4
 
@@ -62,6 +63,30 @@ def require_key(x_api_key: str = Header(default="")) -> None:
 
 def _audit(db: Session, action: str, consultation_id: str, detail: str = "") -> None:
     db.add(AuditEvent(action=action, consultation_id=consultation_id, detail=detail))
+
+
+VIEW_DEDUPE = timedelta(minutes=5)
+
+
+def _audit_view(db: Session, c: Consultation) -> None:
+    """Record that a note was opened, without letting status polling flood the log.
+
+    Nothing is logged while the note is still processing, and a view directly
+    after another view of the same note within VIEW_DEDUPE is not repeated.
+    """
+    if c.status == "processing":
+        return
+    last = db.scalars(
+        select(AuditEvent)
+        .where(AuditEvent.consultation_id == c.id)
+        .order_by(AuditEvent.id.desc())
+        .limit(1)
+    ).first()
+    if last is not None and last.action == "viewed":
+        at = last.at if last.at.tzinfo else last.at.replace(tzinfo=timezone.utc)
+        if utcnow() - at < VIEW_DEDUPE:
+            return
+    _audit(db, "viewed", c.id)
 
 
 def _get(db: Session, consultation_id: str) -> Consultation:
@@ -140,7 +165,7 @@ def list_consultations(db: Session = Depends(get_db)):
          dependencies=[Depends(require_key)])
 def get_consultation(cid: str, db: Session = Depends(get_db)):
     c = _get(db, cid)
-    _audit(db, "viewed", cid)
+    _audit_view(db, c)
     db.commit()
     return c
 
@@ -159,20 +184,31 @@ def edit_note(cid: str, body: NoteUpdate, db: Session = Depends(get_db)):
     for name, text in body.sections.items():
         sections[name]["text"] = text
     note["sections"] = sections
+    edited = sorted(body.sections)
+    # Clinician-corrected lists replace the draft's entries (citations are dropped).
+    for key in ("allergies", "medications"):
+        values = getattr(body, key)
+        if values is not None:
+            note[key] = [{"text": v.strip(), "sources": [], "edited": True}
+                         for v in values if v.strip()]
+            edited.append(key)
     c.note = note  # reassign so SQLAlchemy sees the JSON change
-    _audit(db, "edited", cid, ",".join(sorted(body.sections)))
+    _audit(db, "edited", cid, ",".join(edited))
     db.commit()
     return c
 
 
 @app.post("/api/consultations/{cid}/approve", response_model=ConsultationOut,
           dependencies=[Depends(require_key)])
-def approve(cid: str, db: Session = Depends(get_db)):
+def approve(cid: str, acknowledged: bool = False, db: Session = Depends(get_db)):
     c = _get(db, cid)
     if c.status != "ready":
         raise HTTPException(409, "Only a ready note can be approved.")
+    flags = (c.note or {}).get("flags") or []
+    if flags and not acknowledged:
+        raise HTTPException(409, "This note has safety flags that must be acknowledged.")
     c.status, c.approved_at = "approved", utcnow()
-    _audit(db, "approved", cid)
+    _audit(db, "approved", cid, f"acknowledged {len(flags)} flag(s)" if flags else "")
     db.commit()
     return c
 
@@ -186,6 +222,12 @@ def export_markdown(cid: str, db: Session = Depends(get_db)):
     lines = [f"# Consultation note: {c.patient_ref}", "",
              f"Date: {c.created_at:%Y-%m-%d %H:%M} UTC",
              f"Status: {c.status}" + (" (clinician approved)" if c.approved_at else " (DRAFT)"), ""]
+    for flag in c.note.get("flags") or []:
+        lines += [f"> **Safety flag:** {flag}", ""]
+    allergies = c.note.get("allergies") or []
+    lines += ["## Allergies"] + ([f"- {a['text']}" for a in allergies] or ["None stated"]) + [""]
+    medications = c.note.get("medications") or []
+    lines += ["## Current medications"] + ([f"- {m['text']}" for m in medications] or ["None stated"]) + [""]
     for name in SECTIONS:
         lines += [f"## {name.capitalize()}", c.note["sections"][name]["text"], ""]
     if c.note.get("action_items"):

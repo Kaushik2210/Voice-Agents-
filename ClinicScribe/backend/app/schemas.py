@@ -37,6 +37,9 @@ class ConsultationSummary(BaseModel):
 class NoteUpdate(BaseModel):
     # Clinician edits: section name -> replacement text. Sources are kept.
     sections: dict[str, str] = Field(default_factory=dict)
+    # Full replacement lists, one string per entry. None leaves the list untouched.
+    allergies: list[str] | None = None
+    medications: list[str] | None = None
 
 
 class AuditOut(BaseModel):
