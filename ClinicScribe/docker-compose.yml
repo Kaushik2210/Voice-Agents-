@@ -1,0 +1,26 @@
+# VoiceStudio (ASR) and Ollama (LLM) run on the host, where they can use the GPU.
+# This stack only runs ClinicScribe's API and web UI and reaches them through
+# host.docker.internal. Nothing here makes an outbound internet call.
+services:
+  api:
+    build: ./backend
+    env_file: .env
+    environment:
+      VOICESTUDIO_URL: ${VOICESTUDIO_URL:-http://host.docker.internal:3900}
+      OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434}
+      CORS_ORIGINS: http://localhost:8080
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - clinicscribe-data:/data
+    ports:
+      - "127.0.0.1:8000:8000"   # loopback only; put a TLS proxy in front for LAN use
+
+  web:
+    build: ./frontend
+    depends_on: [api]
+    ports:
+      - "127.0.0.1:8080:80"
+
+volumes:
+  clinicscribe-data:
