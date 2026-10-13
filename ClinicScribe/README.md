@@ -58,8 +58,25 @@ Run the tests: `cd backend && python -m pytest`.
 | Identifiers | Phone, email and 12-digit IDs are masked (`REDACT_IDENTIFIERS`) |
 | Consent | Upload is refused unless consent is confirmed |
 | Access | Optional `API_KEY`; API port bound to loopback in Docker |
-| Audit | Created, viewed, edited, approved, exported, deleted and purged events are logged |
+| Audit | Created, viewed, edited, approved, exported, deleted and purged events are logged. Views are logged once per five minutes per note, and never while a note is still processing |
 | Network | No outbound internet call is made by this code |
+
+## Clinical safety checks
+
+A small local model sometimes drops facts when it summarises. In the first
+end-to-end run it left out a patient's penicillin allergy, so allergies do not
+rely on the model alone:
+
+- Allergies and current medications are separate, prominent fields.
+- Every transcript segment that mentions an allergy is guaranteed to reach the
+  allergy list. If the model left it out, it is added word-for-word (a question
+  is kept together with the patient's answer) and the note is flagged.
+- A flagged note cannot be approved until the clinician acknowledges the flag.
+- Allergy and medication lists are editable; a clinician's correction replaces
+  the draft's entries.
+
+This is a backstop for allergies only. The other sections and the medication
+list still depend on the model and must be read against the transcript.
 
 **Limits:** redaction is pattern-based and does **not** detect names or
 addresses. Treat all stored data as identifiable health information. The
@@ -71,7 +88,24 @@ login yet, only a shared API key.
 - No speaker diarization yet (doctor vs patient are not separated).
 - Per-segment timestamps depend on the ASR engine selected in VoiceStudio.
 - Long consultations may exceed the LLM context (`OLLAMA_NUM_CTX`); chunking is not implemented.
-- The end-to-end pipeline has been unit-tested with stubs but not yet benchmarked on real recordings.
+- Source citations are helpful but not exhaustive: a section may omit a segment it drew from.
+- Medications are not backed by a deterministic check the way allergies are.
+- Only one end-to-end run so far, and its audio was synthetic (a built-in Windows
+  voice), so it validates the pipeline rather than real-world accuracy.
+
+## Measured so far
+
+One run on a CPU-only laptop (Intel Iris Xe, 16 GB RAM, no GPU), 46 s of synthetic
+speech, `faster-whisper-small` via VoiceStudio 0.5.6 and `llama3` 8B via Ollama:
+
+| Stage | Time |
+|---|---|
+| Transcription | about 25 s |
+| Note drafting | about 70 s |
+| Total, upload to ready | 101 s |
+
+`large-v3` (VoiceStudio's default) is too heavy for this class of machine; select
+a small model in VoiceStudio. Real recordings with accents and noise are still to be measured.
 
 ## Roadmap
 
