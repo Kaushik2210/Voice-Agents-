@@ -1,0 +1,48 @@
+from datetime import datetime
+
+from pydantic import BaseModel, ConfigDict, Field
+
+
+class Segment(BaseModel):
+    start: float | None = None
+    end: float | None = None
+    text: str
+
+
+class ConsultationOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    created_at: datetime
+    patient_ref: str
+    language: str
+    template: str
+    status: str
+    error: str | None
+    segments: list[Segment]
+    note: dict | None
+    redactions: int
+    approved_at: datetime | None
+
+
+class ConsultationSummary(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    created_at: datetime
+    patient_ref: str
+    status: str
+
+
+class NoteUpdate(BaseModel):
+    # Clinician edits: section name -> replacement text. Sources are kept.
+    sections: dict[str, str] = Field(default_factory=dict)
+
+
+class AuditOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    at: datetime
+    action: str
+    consultation_id: str
+    detail: str
