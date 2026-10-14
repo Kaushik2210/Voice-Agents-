@@ -95,8 +95,28 @@ rely on the model alone:
 - Allergy and medication lists are editable; a clinician's correction replaces
   the draft's entries.
 
-This is a backstop for allergies only. The other sections and the medication
-list still depend on the model and must be read against the transcript.
+### Numbers and conditionals
+
+Two more deterministic checks run on every drafted note and add flags (which
+must be acknowledged before approval). They never edit the note.
+
+- **Quantities.** Every dose, duration and vital in the note must also appear in
+  the transcript. Spoken numbers are normalised ("six fifty milligrams" is
+  650 mg, "twice a day" is 2 times). A dose is tied to its drug, so a dose
+  borrowed from another medicine is caught: paracetamol 500 mg is flagged when
+  500 mg was only said for metformin.
+- **Conditionals.** When the note says "X if C", the transcript's own
+  "if C, A. Otherwise B" is used to check that X belongs to C and not to the
+  other branch. A flipped comparator is handled: "if less than three days" is
+  correct when the doctor said "more than three days ... otherwise X".
+
+This is a safety net, not a proof. It only checks what it can parse: an
+outcome reworded without an "if", a condition without a comma in the
+transcript, or a drug named differently in the note and the recording passes
+unchecked.
+
+Everything else in the note still depends on the model and must be read against
+the transcript.
 
 **Limits:** redaction is pattern-based and does **not** detect names or
 addresses. Treat all stored data as identifiable health information. The
@@ -108,8 +128,10 @@ login yet, only a shared API key.
 - Speaker labels are acoustic and numbered, not named: the clinician assigns
   Clinician and Patient. Overlapping speech, more than two voices and non-English
   voices have not been measured. Verified on one synthetic two-voice clip only.
-- Note content can differ between runs of the same audio, including a wrong
-  conditional. Nothing in the app can detect that; the clinician must.
+- Note content differs between runs of the same audio, and the model got a
+  follow-up rule backwards on a clip it had right before. Doses, numbers and
+  "if / otherwise" rules are now checked against the transcript (see above),
+  but wording the checks cannot parse still needs the clinician's eyes.
 - Per-segment timestamps depend on the ASR engine selected in VoiceStudio.
 - Long consultations may exceed the LLM context (`OLLAMA_NUM_CTX`); chunking is not implemented.
 - Source citations are helpful but not exhaustive: a section may omit a segment it drew from.
@@ -149,6 +171,14 @@ Runs 2 and 3 used the same audio and had an answer key.
 The two voices were very different (one male, one female), which is the easy
 case for speaker separation.
 
+**Checking the follow-up rule (same transcript, real model, 6 runs).** With the
+original prompt the model wrote the rule backwards in 3 of 3 runs, and the
+conditional check flagged all 3. After adding an explicit rule to keep
+if / otherwise branches (and every number) exact, it got the rule right in 2 of
+3 runs, in two different wordings, and the check flagged the one that was wrong.
+No run raised a false alarm. That is six runs of one transcript, so read it as
+"the check works on the failure we saw", not as a measured error rate.
+
 Accuracy on clean synthetic speech says little about accented, noisy or
 overlapping speech. `large-v3` (VoiceStudio's default) is too heavy for this
 class of machine; select a small model in VoiceStudio. Real recordings are
@@ -158,7 +188,8 @@ still to be measured.
 
 - [x] Speaker diarization (sherpa-onnx, CPU) with clinician-assigned roles
 - [ ] Measure diarization on real, overlapping and Hinglish speech
-- [ ] Check conditionals and numbers in the note against the transcript automatically
+- [x] Check conditionals and numbers in the note against the transcript automatically
+- [ ] Measure the checks on many more real notes (false alarms and misses), not six runs of one clip
 - [ ] Benchmarks: word error rate on labelled accented / noisy audio, processing time on CPU vs GPU
 - [ ] Per-user login with roles, encrypted storage
 - [ ] Note templates per specialty, Hinglish and regional-language evaluation
