@@ -58,6 +58,41 @@ def test_flagged_note_needs_acknowledgement_to_approve():
         assert ok.status_code == 200 and ok.json()["status"] == "approved"
 
 
+def _diarized_consultation() -> str:
+    note = parse_note("{}", 2)
+    cid = uuid4().hex
+    segments = [{"start": 0, "end": 2, "text": "Any allergies?", "speaker": "Speaker 1"},
+                {"start": 2, "end": 4, "text": "Penicillin.", "speaker": "Speaker 2"}]
+    with SessionLocal() as db:
+        db.add(Consultation(id=cid, patient_ref="MRN-S", consent_confirmed=True,
+                            status="ready", segments=segments, note=note))
+        db.commit()
+    return cid
+
+
+def test_clinician_assigns_speaker_roles_and_they_persist():
+    cid = _diarized_consultation()
+    with TestClient(app) as client:
+        r = client.patch(f"/api/consultations/{cid}/note",
+                         json={"speaker_roles": {"Speaker 1": "Clinician", "Speaker 2": "Patient"}})
+        assert r.status_code == 200
+        assert r.json()["note"]["speaker_roles"] == {"Speaker 1": "Clinician", "Speaker 2": "Patient"}
+        again = client.get(f"/api/consultations/{cid}").json()
+        assert again["note"]["speaker_roles"]["Speaker 2"] == "Patient"
+        assert "speaker_roles" in " ".join(
+            a["detail"] for a in client.get("/api/audit").json() if a["consultation_id"] == cid)
+
+
+def test_speaker_roles_reject_unknown_speaker_bad_role_and_duplicates():
+    cid = _diarized_consultation()
+    with TestClient(app) as client:
+        url = f"/api/consultations/{cid}/note"
+        assert client.patch(url, json={"speaker_roles": {"Speaker 9": "Patient"}}).status_code == 422
+        assert client.patch(url, json={"speaker_roles": {"Speaker 1": "Nurse"}}).status_code == 422
+        both = {"Speaker 1": "Patient", "Speaker 2": "Patient"}
+        assert client.patch(url, json={"speaker_roles": both}).status_code == 422
+
+
 def test_unflagged_note_approves_without_acknowledgement():
     cid = _ready_consultation()
     with TestClient(app) as client:

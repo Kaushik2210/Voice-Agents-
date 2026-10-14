@@ -42,6 +42,8 @@ class NoteUpdate(BaseModel):
     # Full replacement lists, one string per entry. None leaves the list untouched.
     allergies: list[str] | None = None
     medications: list[str] | None = None
+    # Who each diarized speaker is, e.g. {"Speaker 1": "Clinician"}. Replaces the map.
+    speaker_roles: dict[str, str] | None = None
 
 
 class AuditOut(BaseModel):

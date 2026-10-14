@@ -66,6 +66,7 @@ def _audit(db: Session, action: str, consultation_id: str, detail: str = "") -> 
 
 
 VIEW_DEDUPE = timedelta(minutes=5)
+SPEAKER_ROLES = {"Clinician", "Patient"}
 
 
 def _audit_view(db: Session, c: Consultation) -> None:
@@ -192,6 +193,17 @@ def edit_note(cid: str, body: NoteUpdate, db: Session = Depends(get_db)):
             note[key] = [{"text": v.strip(), "sources": [], "edited": True}
                          for v in values if v.strip()]
             edited.append(key)
+    if body.speaker_roles is not None:
+        present = {s.get("speaker") for s in c.segments if s.get("speaker")}
+        roles = body.speaker_roles
+        if set(roles) - present:
+            raise HTTPException(422, f"Unknown speakers: {sorted(set(roles) - present)}")
+        if set(roles.values()) - SPEAKER_ROLES:
+            raise HTTPException(422, f"Roles must be one of {sorted(SPEAKER_ROLES)}")
+        if len(set(roles.values())) != len(roles):
+            raise HTTPException(422, "Each role can be given to one speaker only.")
+        note["speaker_roles"] = dict(roles)
+        edited.append("speaker_roles")
     c.note = note  # reassign so SQLAlchemy sees the JSON change
     _audit(db, "edited", cid, ",".join(edited))
     db.commit()
