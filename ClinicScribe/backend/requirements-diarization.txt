@@ -1,0 +1,4 @@
+# Optional: speaker labels. The app works without these and leaves the
+# transcript unlabelled. ffmpeg must also be on PATH (or set FFMPEG_PATH).
+sherpa-onnx>=1.12
+numpy>=1.26

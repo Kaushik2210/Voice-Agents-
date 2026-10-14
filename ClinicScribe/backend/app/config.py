@@ -19,6 +19,13 @@ class Settings(BaseSettings):
     ollama_num_ctx: int = 8192
     llm_timeout_s: float = 300.0
 
+    # Speaker diarization (sherpa-onnx, CPU). Models are small, ungated downloads;
+    # see the README for the two files. Without them the transcript is unlabelled.
+    diarize: bool = True
+    speaker_models_dir: Path = Path("./models")
+    num_speakers: int = 2  # a consultation is usually two people; 0 = detect
+    ffmpeg_path: str = "ffmpeg"
+
     # Privacy and retention
     data_dir: Path = Path("./data")
     keep_audio: bool = False  # delete the recording as soon as it is transcribed
@@ -29,6 +36,14 @@ class Settings(BaseSettings):
     # Access
     api_key: str = ""  # if set, every /api request must send X-API-Key
     cors_origins: str = "http://localhost:5173"
+
+    @property
+    def segmentation_model(self) -> Path:
+        return self.speaker_models_dir / "sherpa-onnx-pyannote-segmentation-3-0" / "model.onnx"
+
+    @property
+    def embedding_model(self) -> Path:
+        return self.speaker_models_dir / "wespeaker_en_voxceleb_resnet34.onnx"
 
     @property
     def audio_dir(self) -> Path:
