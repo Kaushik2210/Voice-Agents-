@@ -90,22 +90,29 @@ login yet, only a shared API key.
 - Long consultations may exceed the LLM context (`OLLAMA_NUM_CTX`); chunking is not implemented.
 - Source citations are helpful but not exhaustive: a section may omit a segment it drew from.
 - Medications are not backed by a deterministic check the way allergies are.
-- Only one end-to-end run so far, and its audio was synthetic (a built-in Windows
-  voice), so it validates the pipeline rather than real-world accuracy.
+- Only two end-to-end runs so far, both on synthetic audio (built-in Windows
+  voices), so they validate the pipeline rather than real-world accuracy.
 
 ## Measured so far
 
-One run on a CPU-only laptop (Intel Iris Xe, 16 GB RAM, no GPU), 46 s of synthetic
-speech, `faster-whisper-small` via VoiceStudio 0.5.6 and `llama3` 8B via Ollama:
+Runs on a CPU-only laptop (Intel Iris Xe, 16 GB RAM, no GPU) with
+`faster-whisper-small` via VoiceStudio 0.5.6 and `llama3` 8B via Ollama.
+Audio is synthetic speech from the built-in Windows voices.
 
-| Stage | Time |
-|---|---|
-| Transcription | about 25 s |
-| Note drafting | about 70 s |
-| Total, upload to ready | 101 s |
+| Run | Audio | Transcription | Note | Total |
+|---|---|---|---|---|
+| 1. One speaker, short visit | 46 s | about 25 s | about 70 s | 101 s |
+| 2. Two voices, medication and allergy | 84 s | not timed separately | not timed separately | 141 s |
 
-`large-v3` (VoiceStudio's default) is too heavy for this class of machine; select
-a small model in VoiceStudio. Real recordings with accents and noise are still to be measured.
+Run 2 had an answer key. Every stated fact reached the note with a citation:
+symptoms and duration, the regular medication and dose, the allergy and its
+reaction, vitals, assessment, prescription and follow-up rule. The spoken phone
+number was masked and the audio file was deleted after transcription.
+
+Accuracy on clean synthetic speech says little about accented, noisy or
+overlapping speech. `large-v3` (VoiceStudio's default) is too heavy for this
+class of machine; select a small model in VoiceStudio. Real recordings are
+still to be measured.
 
 ## Roadmap
 
