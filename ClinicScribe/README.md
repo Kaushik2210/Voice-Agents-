@@ -7,6 +7,15 @@ language model both run on the clinic's own machine, so audio never leaves it.
 > **Status: early scaffold (v0.1).** Not a medical device, not validated in a
 > clinical setting. Output is a draft that a clinician must review and approve.
 
+**Live demo: https://clinicscribe-demo.vercel.app**
+
+The demo is the real interface showing one note that the real pipeline produced
+from a synthetic recording (a computer voice reading a script, so no patient
+data). You can assign speakers, edit sections and approve the note; reloading
+resets it. Uploads are turned off on purpose: processing needs a local speech
+model and a local language model, and recordings are meant never to leave the
+clinic's machine, so the pipeline is not hosted. See [Hosting the demo](#hosting-the-demo).
+
 ## How it works
 
 ```
@@ -49,6 +58,21 @@ Or with Docker (VoiceStudio and Ollama stay on the host): `docker compose up --b
 then open http://localhost:8080.
 
 Run the tests: `cd backend && python -m pytest`.
+
+### Hosting the demo
+
+Only the web interface is hosted, built in demo mode so it needs no backend:
+
+```bash
+cd frontend
+npm run build:demo     # same as: vite build --mode demo  (sets VITE_DEMO=true)
+npx vercel --prod      # root directory: ClinicScribe/frontend
+```
+
+In demo mode the interface reads one fixture (`src/demoData.js`) through
+`src/demo.js` instead of calling the API. State is held in memory only and
+nothing is sent anywhere. `vercel.json` also sets `nosniff`, no-referrer and
+frame-deny headers. Do not host the backend publicly with real recordings.
 
 ### Speaker labels (optional)
 
