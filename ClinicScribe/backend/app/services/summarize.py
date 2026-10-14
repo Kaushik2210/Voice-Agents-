@@ -11,6 +11,7 @@ import httpx
 
 from ..config import settings
 from .safety import ensure_allergies
+from .verify import verify_note
 
 SECTIONS = ["subjective", "objective", "assessment", "plan"]
 
@@ -24,7 +25,10 @@ SYSTEM_PROMPT = (
     "consultation transcript. Rules: use ONLY information stated in the transcript; "
     "if a section was not discussed write exactly 'Not discussed'; never diagnose, "
     "infer, or add advice the clinician did not give; keep each section concise. "
-    "Respond with JSON only."
+    "Keep conditional instructions exactly as given: when the clinician says "
+    "'if A, do X; otherwise do Y', write both branches, each with its own outcome, "
+    "and never move an outcome from one branch to the other. Copy every number, dose "
+    "and duration exactly. Respond with JSON only."
 )
 
 # Empty values on purpose: placeholder text in the example gets copied into the
@@ -142,4 +146,5 @@ async def summarize(segments: list[dict]) -> dict:
         resp = await client.post(url, json=payload)
     resp.raise_for_status()
     note = parse_note(resp.json()["message"]["content"], len(segments))
-    return ensure_allergies(note, segments)
+    note = ensure_allergies(note, segments)
+    return verify_note(note, segments)
