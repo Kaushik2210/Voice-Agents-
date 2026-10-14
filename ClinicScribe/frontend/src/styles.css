@@ -50,4 +50,21 @@ button.danger { color: var(--bad); }
 .transcript p { margin: 0 0 6px; padding: 2px 6px; border-radius: 4px; }
 .transcript .hit { background: var(--hit); }
 .ts { color: var(--muted); font-variant-numeric: tabular-nums; margin-right: 6px; }
+
+/* Speaker turns: the text label carries the meaning; indentation is a second cue. */
+.transcript p[data-side="b"] { margin-left: 20px; }
+.who { display: block; font-size: 13px; font-weight: 600; letter-spacing: .02em; color: var(--text); }
+.roles { display: grid; gap: 10px; margin-bottom: 12px; }
+.role-row { border: 0; padding: 0; margin: 0; min-width: 0; }
+.role-row legend { padding: 0 0 4px; font-size: 13px; color: var(--muted); }
+.segmented { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.segmented label { position: relative; display: block; margin: 0; font-weight: 400; }
+.segmented label + label { border-left: 1px solid var(--line); }
+.segmented input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.segmented span { display: flex; align-items: center; justify-content: center; min-width: 96px; min-height: 44px; padding: 0 14px; background: var(--surface); }
+.segmented input:checked + span { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.segmented input:checked + span::before { content: "\2713\00a0"; }
+.segmented input:focus-visible + span { outline: 3px solid var(--accent); outline-offset: -3px; }
+.role-row:disabled .segmented { opacity: .6; }
+@media (prefers-reduced-motion: no-preference) { .segmented span { transition: background-color .15s; } }
 .error { color: var(--bad); margin: 0; }

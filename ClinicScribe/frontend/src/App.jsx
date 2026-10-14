@@ -9,6 +9,35 @@ function fmt(seconds) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
 
+const ROLES = ["Clinician", "Patient"];
+
+// Segmented control per speaker: two exclusive options, applied immediately.
+function SpeakerRoles({ speakers, roles, disabled, onChange }) {
+  return (
+    <div className="roles">
+      {speakers.map((speaker) => (
+        <fieldset key={speaker} className="role-row" disabled={disabled}>
+          <legend>Who is {speaker}?</legend>
+          <div className="segmented">
+            {ROLES.map((role) => (
+              <label key={role}>
+                <input
+                  type="radio"
+                  name={`role-${speaker}`}
+                  value={role}
+                  checked={roles[speaker] === role}
+                  onChange={() => onChange(speaker, role)}
+                />
+                <span>{role}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      ))}
+    </div>
+  );
+}
+
 function Health() {
   const [h, setH] = useState(null);
   useEffect(() => {
@@ -113,6 +142,18 @@ function Detail({ id, onDeleted }) {
   const needsAck = flags.length > 0;
   const listText = (key) => lists[key] ?? (c.note?.[key] || []).map((e) => e.text).join("\n");
   const toLines = (value) => value.split("\n").map((s) => s.trim()).filter(Boolean);
+  const speakers = [...new Set(c.segments.map((s) => s.speaker).filter(Boolean))];
+  const roles = c.note?.speaker_roles || {};
+
+  // With exactly two speakers, choosing one role gives the other speaker the opposite.
+  const setRole = (speaker, role) => {
+    const next = { ...roles, [speaker]: role };
+    if (speakers.length === 2) {
+      const other = speakers.find((s) => s !== speaker);
+      next[other] = ROLES.find((r) => r !== role);
+    }
+    run(async () => setC(await api.edit(id, { speaker_roles: next })));
+  };
 
   async function run(fn) {
     setError("");
@@ -237,11 +278,19 @@ function Detail({ id, onDeleted }) {
       {c.segments.length > 0 && (
         <section className="transcript">
           <h3>Transcript {c.redactions > 0 && <small>({c.redactions} identifiers masked)</small>}</h3>
-          {c.segments.map((s, i) => (
-            <p key={i} className={active.has(i) ? "hit" : ""}>
-              <span className="ts">{fmt(s.start) || `#${i}`}</span> {s.text}
-            </p>
-          ))}
+          {speakers.length > 0 && (
+            <SpeakerRoles speakers={speakers} roles={roles} disabled={!editable} onChange={setRole} />
+          )}
+          {c.segments.map((s, i) => {
+            const turnStart = s.speaker && s.speaker !== c.segments[i - 1]?.speaker;
+            const side = speakers.indexOf(s.speaker) % 2 === 1 ? "b" : "a";
+            return (
+              <p key={i} className={active.has(i) ? "hit" : ""} data-side={s.speaker ? side : undefined}>
+                {turnStart && <span className="who">{roles[s.speaker] || s.speaker}</span>}
+                <span className="ts">{fmt(s.start) || `#${i}`}</span> {s.text}
+              </p>
+            );
+          })}
         </section>
       )}
     </div>
