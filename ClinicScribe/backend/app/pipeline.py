@@ -6,6 +6,7 @@ import httpx
 from .config import settings
 from .db import SessionLocal
 from .models import AuditEvent, Consultation
+from .services.diarize import label_speakers
 from .services.redact import redact_segments
 from .services.retention import delete_audio
 from .services.summarize import summarize
@@ -34,6 +35,10 @@ async def process(consultation_id: str) -> None:
             if not segments:
                 return _fail(db, c, "No speech was detected in the recording.")
 
+            segments, skipped = await label_speakers(audio, segments)
+            if skipped:
+                log.info("speaker labels skipped: %s", skipped)
+
             redactions = 0
             if settings.redact_identifiers:
                 segments, redactions = redact_segments(segments)
@@ -42,8 +47,10 @@ async def process(consultation_id: str) -> None:
 
             c.note = await summarize(segments)
             c.status = "ready"
-            db.add(AuditEvent(action="processed", consultation_id=c.id,
-                              detail=f"{len(segments)} segments, {redactions} redactions"))
+            speakers = len({s["speaker"] for s in segments if s.get("speaker")})
+            detail = f"{len(segments)} segments, {redactions} redactions, "
+            detail += f"{speakers} speakers" if not skipped else f"no speaker labels ({skipped})"
+            db.add(AuditEvent(action="processed", consultation_id=c.id, detail=detail))
             db.commit()
         except httpx.ConnectError as exc:
             log.warning("service unreachable: %s", exc)

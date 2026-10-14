@@ -48,10 +48,23 @@ SECTION_GUIDE = (
 )
 
 
+SPEAKER_GUIDE = (
+    "Speakers are numbered, not named. The clinician is the speaker who asks about "
+    "symptoms, examines and prescribes; the patient is the other. Symptoms, history, "
+    "allergies and medicines the patient takes come from the patient.\n\n"
+)
+
+
 def build_user_prompt(segments: list[dict]) -> str:
-    lines = "\n".join(f"[{i}] {s['text']}" for i, s in enumerate(segments))
+    def line(i: int, s: dict) -> str:
+        who = f"{s['speaker']}: " if s.get("speaker") else ""
+        return f"[{i}] {who}{s['text']}"
+
+    lines = "\n".join(line(i, s) for i, s in enumerate(segments))
+    labelled = any(s.get("speaker") for s in segments)
     return (
         f"Section guide:\n{SECTION_GUIDE}\n\n"
+        f"{SPEAKER_GUIDE if labelled else ''}"
         "Fill in the JSON below. Write each section's text as short sentences that "
         "state what was actually said, and set sources to the segment numbers in "
         "square brackets that support it. Do not repeat the section guide.\n"

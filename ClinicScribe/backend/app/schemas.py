@@ -7,6 +7,8 @@ class Segment(BaseModel):
     start: float | None = None
     end: float | None = None
     text: str
+    # "Speaker 1", "Speaker 2", ... by first appearance; None when not diarized.
+    speaker: str | None = None
 
 
 class ConsultationOut(BaseModel):
