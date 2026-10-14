@@ -20,10 +20,11 @@ React UI ──► FastAPI ──► VoiceStudio  (speech-to-text, localhost:390
 
 1. Upload a recording with a patient reference and a consent confirmation.
 2. VoiceStudio's OpenAI-compatible endpoint transcribes it.
-3. Structured identifiers are masked.
-4. A local LLM drafts Subjective / Objective / Assessment / Plan plus action
+3. Optionally, each segment is labelled with its speaker.
+4. Structured identifiers are masked.
+5. A local LLM drafts Subjective / Objective / Assessment / Plan plus action
    items. Each section lists the transcript segments it came from.
-5. The clinician edits, approves and exports.
+6. The clinician assigns speaker roles, edits, approves and exports.
 
 ## Quick start (development)
 
@@ -48,6 +49,25 @@ Or with Docker (VoiceStudio and Ollama stay on the host): `docker compose up --b
 then open http://localhost:8080.
 
 Run the tests: `cd backend && python -m pytest`.
+
+### Speaker labels (optional)
+
+The transcript can label who is speaking ("Speaker 1", "Speaker 2"). It runs
+on the CPU with [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) and two
+small, ungated models. Without them everything still works; the transcript is
+simply unlabelled and the audit log says why.
+
+1. Install ffmpeg and put it on `PATH` (or set `FFMPEG_PATH`).
+2. `pip install -r backend/requirements-diarization.txt`
+3. Download these two files from the sherpa-onnx releases into `models/`
+   (about 32 MB in total) and unpack the first:
+   - `sherpa-onnx-pyannote-segmentation-3-0.tar.bz2`, from release `speaker-segmentation-models`
+   - `wespeaker_en_voxceleb_resnet34.onnx`, from release `speaker-recongition-models`
+
+Speakers are numbered by first appearance. The clinician says who is who with
+the Clinician / Patient control above the transcript. `NUM_SPEAKERS` defaults
+to 2; set it to 0 to detect the number, which is less reliable on short clips.
+The embedding model is trained on English speakers.
 
 ## Privacy model
 
@@ -85,7 +105,11 @@ login yet, only a shared API key.
 
 ## Known gaps
 
-- No speaker diarization yet (doctor vs patient are not separated).
+- Speaker labels are acoustic and numbered, not named: the clinician assigns
+  Clinician and Patient. Overlapping speech, more than two voices and non-English
+  voices have not been measured. Verified on one synthetic two-voice clip only.
+- Note content can differ between runs of the same audio, including a wrong
+  conditional. Nothing in the app can detect that; the clinician must.
 - Per-segment timestamps depend on the ASR engine selected in VoiceStudio.
 - Long consultations may exceed the LLM context (`OLLAMA_NUM_CTX`); chunking is not implemented.
 - Source citations are helpful but not exhaustive: a section may omit a segment it drew from.
@@ -103,11 +127,27 @@ Audio is synthetic speech from the built-in Windows voices.
 |---|---|---|---|---|
 | 1. One speaker, short visit | 46 s | about 25 s | about 70 s | 101 s |
 | 2. Two voices, medication and allergy | 84 s | not timed separately | not timed separately | 141 s |
+| 3. Same audio as run 2, with speaker labels | 84 s | not timed separately | not timed separately | 250 s |
 
-Run 2 had an answer key. Every stated fact reached the note with a citation:
-symptoms and duration, the regular medication and dose, the allergy and its
-reaction, vitals, assessment, prescription and follow-up rule. The spoken phone
-number was masked and the audio file was deleted after transcription.
+Runs 2 and 3 used the same audio and had an answer key.
+
+- **Run 2:** every stated fact reached the note with a citation: symptoms and
+  duration, the regular medication and dose, the allergy and its reaction,
+  vitals, assessment, prescription and follow-up rule. The spoken phone number
+  was masked and the audio file was deleted after transcription.
+- **Run 3:** speaker labels were correct on 12 of 12 segments, and the
+  allergy, medication, vitals and prescription were again right. The model
+  **inverted the follow-up rule**, writing that follow-up is in one week "if
+  the fever lasts more than three days", when the doctor said more than three
+  days means come back for a blood test. The note content varies between runs
+  of identical audio, so every note needs a clinician's read against the
+  transcript.
+- **Diarization cost:** 30 to 49 s for 84 s of audio on this CPU, measured on
+  its own. The 250 s total includes noisy timing from other load on the
+  machine and should not be read as the cost of diarization.
+
+The two voices were very different (one male, one female), which is the easy
+case for speaker separation.
 
 Accuracy on clean synthetic speech says little about accented, noisy or
 overlapping speech. `large-v3` (VoiceStudio's default) is too heavy for this
@@ -116,7 +156,9 @@ still to be measured.
 
 ## Roadmap
 
-- [ ] Diarization (pyannote or similar, local)
+- [x] Speaker diarization (sherpa-onnx, CPU) with clinician-assigned roles
+- [ ] Measure diarization on real, overlapping and Hinglish speech
+- [ ] Check conditionals and numbers in the note against the transcript automatically
 - [ ] Benchmarks: word error rate on labelled accented / noisy audio, processing time on CPU vs GPU
 - [ ] Per-user login with roles, encrypted storage
 - [ ] Note templates per specialty, Hinglish and regional-language evaluation
