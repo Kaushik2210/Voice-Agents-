@@ -33,7 +33,11 @@ button.danger { color: var(--bad); }
 .list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .list li { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; cursor: pointer; display: grid; gap: 2px; }
 .list li.sel { border-color: var(--accent); }
-.list small, .empty { color: var(--muted); }
+.list small, .empty, .muted { color: var(--muted); }
+.list li:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.muted { margin: 0; }
+.demo-note { max-width: 1200px; margin: 16px auto 0; padding: 10px 14px; border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 8px; background: var(--surface); color: var(--text); font-size: 14px; }
+@media (max-width: 1240px) { .demo-note { margin-left: 20px; margin-right: 20px; } }
 .pill { font-size: 12px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--line); width: fit-content; }
 .pill.ok, .status-ready, .status-approved { color: var(--ok); }
 .pill.bad, .status-failed { color: var(--bad); }

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { api } from "./api.js";
+import { api, DEMO } from "./api.js";
+import { DEMO_UPLOAD_MESSAGE } from "./demo.js";
 
 const SECTIONS = ["subjective", "objective", "assessment", "plan"];
 
@@ -44,6 +45,7 @@ function Health() {
     api.health().then(setH).catch(() => setH({ api: false }));
   }, []);
   if (!h) return null;
+  if (h.demo) return <div className="health"><span className="pill">Demo data</span></div>;
   const dot = (ok, label) => (
     <span className={`pill ${ok ? "ok" : "bad"}`}>{label}</span>
   );
@@ -84,6 +86,16 @@ function UploadForm({ onCreated }) {
     }
   }
 
+  if (DEMO) {
+    // Say why the form is unavailable instead of leaving a dead control.
+    return (
+      <section className="card" aria-labelledby="new-consultation">
+        <h2 id="new-consultation">New consultation</h2>
+        <p className="muted">{DEMO_UPLOAD_MESSAGE}</p>
+      </section>
+    );
+  }
+
   return (
     <form className="card" onSubmit={submit}>
       <h2>New consultation</h2>
@@ -107,7 +119,7 @@ function UploadForm({ onCreated }) {
   );
 }
 
-function Detail({ id, onDeleted }) {
+function Detail({ id, onDeleted, onStatus }) {
   const [c, setC] = useState(null);
   const [drafts, setDrafts] = useState({});
   const [active, setActive] = useState(new Set());
@@ -125,6 +137,11 @@ function Detail({ id, onDeleted }) {
     setActive(new Set());
     load();
   }, [load]);
+
+  // Keep the sidebar in step when this note finishes processing or is approved.
+  useEffect(() => {
+    if (c?.status) onStatus?.();
+  }, [c?.status, onStatus]);
 
   // Poll while the pipeline is still working.
   useEffect(() => {
@@ -306,12 +323,26 @@ export default function App() {
     refresh();
   }, [refresh]);
 
+  // The demo has a single note, so open it straight away.
+  useEffect(() => {
+    if (DEMO && items.length > 0 && selected === null) setSelected(items[0].id);
+  }, [items, selected]);
+
   return (
     <div className="app">
       <header className="top">
         <h1>ClinicScribe</h1>
         <Health />
       </header>
+      {DEMO && (
+        <p className="demo-note" role="note">
+          <strong>Demo.</strong> This note was produced by ClinicScribe from a synthetic
+          recording, a computer voice reading a script, so no patient data is involved.
+          Try assigning speakers, editing a section or approving it; reloading resets
+          everything. The real app runs on a clinic&apos;s own computer, so recordings never
+          leave it.
+        </p>
+      )}
       <div className="layout">
         <aside>
           <UploadForm
@@ -322,7 +353,20 @@ export default function App() {
           />
           <ul className="list">
             {items.map((i) => (
-              <li key={i.id} className={i.id === selected ? "sel" : ""} onClick={() => setSelected(i.id)}>
+              <li
+                key={i.id}
+                className={i.id === selected ? "sel" : ""}
+                role="button"
+                tabIndex={0}
+                aria-current={i.id === selected ? "true" : undefined}
+                onClick={() => setSelected(i.id)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setSelected(i.id);
+                  }
+                }}
+              >
                 <strong>{i.patient_ref}</strong>
                 <span className={`pill status-${i.status}`}>{i.status}</span>
                 <small>{new Date(i.created_at).toLocaleString()}</small>
@@ -335,6 +379,7 @@ export default function App() {
           {selected ? (
             <Detail
               id={selected}
+              onStatus={refresh}
               onDeleted={() => {
                 setSelected(null);
                 refresh();
