@@ -1,3 +1,8 @@
+import { demoApi } from "./demo.js";
+
+// The hosted demo build has no backend: it serves one synthetic sample instead.
+export const DEMO = import.meta.env.VITE_DEMO === "true";
+
 // The API key (if the server sets API_KEY) lives only in sessionStorage,
 // so it is gone when the tab closes and never ends up in the built bundle.
 const KEY = "clinicscribe.apiKey";
@@ -40,7 +45,7 @@ async function request(path, options = {}) {
 const json = async (path, options) => (await request(path, options)).json();
 const text = async (path) => (await request(path)).text();
 
-export const api = {
+const liveApi = {
   health: () => fetch("/health").then((r) => r.json()),
   list: () => json("/api/consultations"),
   get: (id) => json(`/api/consultations/${id}`),
@@ -57,3 +62,5 @@ export const api = {
   remove: (id) => request(`/api/consultations/${id}`, { method: "DELETE" }),
   exportMarkdown: (id) => text(`/api/consultations/${id}/export.md`),
 };
+
+export const api = DEMO ? demoApi : liveApi;
