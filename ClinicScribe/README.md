@@ -16,6 +16,20 @@ resets it. Uploads are turned off on purpose: processing needs a local speech
 model and a local language model, and recordings are meant never to leave the
 clinic's machine, so the pipeline is not hosted. See [Hosting the demo](#hosting-the-demo).
 
+## Screenshots
+
+Captured from the live demo. The recording behind them is a synthetic computer voice.
+
+| | |
+|---|---|
+| ![A drafted note with allergies, medications and cited sections](docs/screenshots/note.png) | ![A note the checks flagged: the follow-up rule is attached to the wrong case](docs/screenshots/flagged.png) |
+| **A drafted note.** Allergies and medications are separate fields, and every section carries timestamp chips that jump to the transcript lines it came from. | **A flagged note.** The model attached the follow-up to the wrong case, so the app flags it and the clinician must acknowledge before approving. |
+
+![The transcript with a Clinician / Patient control for each speaker](docs/screenshots/transcript.png)
+
+**The transcript.** Speakers are labelled acoustically and the clinician says who is
+who; a label appears where the speaker changes.
+
 ## How it works
 
 ```
