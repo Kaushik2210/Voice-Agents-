@@ -51,8 +51,9 @@ React UI ──► FastAPI ──► VoiceStudio  (speech-to-text, localhost:390
 
 ## Quick start (development)
 
-Prerequisites: [VoiceStudio](https://github.com/debpalash/VoiceStudio) running
-locally, [Ollama](https://ollama.com) with a model pulled
+Prerequisites: a local speech-to-text server (see
+[Speech-to-text engine](#speech-to-text-engine); VoiceStudio is optional),
+[Ollama](https://ollama.com) with a model pulled
 (`ollama pull llama3.1:8b`), Python 3.12+, Node 22+.
 
 ```bash
@@ -72,6 +73,26 @@ Or with Docker (VoiceStudio and Ollama stay on the host): `docker compose up --b
 then open http://localhost:8080.
 
 Run the tests: `cd backend && python -m pytest`.
+
+### Speech-to-text engine
+
+**VoiceStudio is optional.** ClinicScribe only needs a local server that answers
+the OpenAI audio API, `POST /v1/audio/transcriptions` with a file upload. Point
+`VOICESTUDIO_URL` (the name is historical) at it, and set `ASR_MODEL` to a model
+name that server accepts.
+
+- **Tested:** [VoiceStudio](https://github.com/debpalash/VoiceStudio) 0.5.6 with
+  `faster-whisper-small`. It is the only engine this has been run against.
+- **Should work, untested:** any other server exposing the same endpoint, such as a
+  faster-whisper or whisper.cpp server.
+- **What the server should return:** `verbose_json` with per-segment `start` and
+  `end`. If it returns only plain text, notes still work, but the transcript is a
+  single untimed segment, so citation timestamps and speaker labels are not
+  available.
+- **Not needed for the demo:** the hosted demo calls no engine at all.
+
+The "VoiceStudio" status pill in the interface is just the health check of
+whatever server `VOICESTUDIO_URL` points at.
 
 ### Hosting the demo
 
@@ -235,7 +256,7 @@ still to be measured.
 
 ## Licence
 
-VoiceStudio is AGPL-3.0 and is used here as an unmodified separate service.
+VoiceStudio, if you choose it, is AGPL-3.0 and is used here as an unmodified separate service.
 Check the licence of every speech and language model you deploy.
 Recording consultations requires patient consent under the rules that apply
 where you practise.
