@@ -336,11 +336,12 @@ export default function App() {
       </header>
       {DEMO && (
         <p className="demo-note" role="note">
-          <strong>Demo.</strong> This note was produced by ClinicScribe from a synthetic
+          <strong>Demo.</strong> These notes were produced by ClinicScribe from a synthetic
           recording, a computer voice reading a script, so no patient data is involved.
-          Try assigning speakers, editing a section or approving it; reloading resets
-          everything. The real app runs on a clinic&apos;s own computer, so recordings never
-          leave it.
+          Open <strong>MRN-DEMO-002</strong> to see a note where the model got the
+          follow-up rule wrong and the app flagged it. Try assigning speakers, editing a
+          section or approving; reloading resets everything. The real app runs on a
+          clinic&apos;s own computer, so recordings never leave it.
         </p>
       )}
       <div className="layout">
