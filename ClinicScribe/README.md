@@ -32,22 +32,32 @@ who; a label appears where the speaker changes.
 
 ## How it works
 
-```
-React UI ──► FastAPI ──► VoiceStudio  (speech-to-text, localhost:3900)
-                │
-                ├──► redaction of phone numbers, emails, 12-digit IDs
-                └──► Ollama         (SOAP draft with source citations, localhost:11434)
-                         │
-                      SQLite  (notes, transcript, audit log)
+```mermaid
+flowchart TB
+  subgraph clinic["Everything in this box runs on the clinic's own machine"]
+    direction TB
+    UI["React interface<br/>upload + consent"] --> API["FastAPI"]
+    API --> ASR["Speech-to-text<br/>local OpenAI-style server"]
+    ASR --> DIA["Speaker labels<br/>sherpa-onnx, optional"]
+    DIA --> RED["Mask phone numbers,<br/>emails, IDs"]
+    RED --> LLM["Ollama<br/>drafts the SOAP note<br/>with citations"]
+    LLM --> CHK["Checks<br/>allergy backstop<br/>doses tied to a drug<br/>if / otherwise rules"]
+    CHK --> DB[("SQLite<br/>notes, transcript,<br/>audit log")]
+  end
+  DB --> REV["Clinician reviews, assigns<br/>speaker roles, acknowledges<br/>any flag, approves"]
 ```
 
 1. Upload a recording with a patient reference and a consent confirmation.
-2. VoiceStudio's OpenAI-compatible endpoint transcribes it.
+2. A local speech-to-text server transcribes it (VoiceStudio is the one tested).
 3. Optionally, each segment is labelled with its speaker.
 4. Structured identifiers are masked.
 5. A local LLM drafts Subjective / Objective / Assessment / Plan plus action
    items. Each section lists the transcript segments it came from.
-6. The clinician assigns speaker roles, edits, approves and exports.
+6. Deterministic checks compare the draft with the transcript and raise flags.
+7. The clinician assigns speaker roles, edits, acknowledges flags, approves and exports.
+
+The audio file is deleted as soon as it has been transcribed. For the problems
+found along the way and how each was fixed, see [design notes](docs/design-notes.md).
 
 ## Quick start (development)
 
