@@ -91,6 +91,28 @@ product's promise is that recordings never leave the clinic, so it is not hosted
 The public demo serves two notes that the real pipeline produced from a synthetic
 clip, one clean and one the checks flagged, and the review controls work on them.
 
+## 8. The interface redesign found safety problems
+
+Restyling the interface in the same system as the Accessible Reader was meant to be a
+visual change, but looking at real screenshots turned up four problems that matter for
+a safety tool.
+
+- **The safety flags were below the first screen on a phone.** A banner and a card sat
+  above them. The copy is shorter, the redundant card is hidden on phones, and a test
+  now fails if a flag is not on the first screen.
+- **A floating action bar covered a flag's text on a phone.** Always-reachable buttons
+  suit a desktop, but on a small screen they hid the very information they sat above.
+  On a phone the bar is now part of the page, and a test checks directly whether
+  anything covers a flag.
+- **The note's text boxes had no accessible name.** A heading sat above each one but was
+  not tied to it, so a screen reader announced an unlabelled box. They are now labelled.
+- **Any failed action replaced the whole note with an error.** The error now appears
+  next to the actions and the note stays on screen.
+
+I also checked that the new test can fail, since it passed first time: I removed the
+acknowledgement gate from the source on purpose, and the test failed on exactly that
+check. The gate was then restored.
+
 ## What is not verified
 
 - Real human speech: accents, noise, overlapping talk, Hinglish. Nothing here has
@@ -100,3 +122,6 @@ clip, one clean and one the checks flagged, and the review controls work on them
   named differently in the note and the recording, passes unchecked.
 - Medications have no deterministic backstop of the kind allergies have.
 - No user login, and the database is not encrypted at rest.
+- The interface has not been tried with a screen reader or by clinicians. The structure
+  is checked by automation, so treat accessibility as built to the guidance, not
+  verified.

@@ -30,6 +30,31 @@ Captured from the live demo. The recording behind them is a synthetic computer v
 **The transcript.** Speakers are labelled acoustically and the clinician says who is
 who; a label appears where the speaker changes.
 
+| | |
+|---|---|
+| ![The flagged note in the dark theme](docs/screenshots/dark.png) | ![The flagged note on a phone, with the safety flag on the first screen](docs/screenshots/mobile.png) |
+| **Dark theme**, which follows the device. Flag text keeps at least 4.5:1 contrast. | **On a phone**, the safety flag is on the first screen and nothing floats over it. |
+
+### Interface
+
+The interface shares its visual system with the [Accessible Reader](../AccessibleReader/):
+ultramarine on paper, serif headings, tiny uppercase labels, hairline rules and pill
+controls. For a clinical tool it is deliberately calmer: no decorative motion, and the
+design serves safety before style.
+
+- **Safety flags are unmissable.** A full-width card with a warning icon, the words
+  "Safety flag", and a red rule. The text is ink on a tint, not red on red, so it stays
+  readable. Each is announced as an alert to assistive technology.
+- **Status is never colour alone.** Every status carries a word and a glyph: "Ready for
+  review", "Approved", "Processing", "Failed".
+- **A disabled button explains itself.** Approve says why it is unavailable ("Tick the
+  box above to confirm you have checked the flagged items", or "Save your edits before
+  approving") and the button points at that text for screen readers.
+- **Approval locks the note.** Text boxes and speaker roles become read-only, and stay
+  fully readable.
+- **Actions stay in reach** on a desktop in a floating bar. On a phone that bar sits at
+  the end of the note instead, because a floating bar covered a safety flag there.
+
 ## How it works
 
 ```mermaid
@@ -82,7 +107,19 @@ cd frontend && npm install && npm run dev        # http://localhost:5173
 Or with Docker (VoiceStudio and Ollama stay on the host): `docker compose up --build`,
 then open http://localhost:8080.
 
-Run the tests: `cd backend && python -m pytest`.
+Run the tests:
+
+```bash
+cd backend && python -m pytest            # 52 backend tests
+cd frontend && npm test                   # colour contrast of every text/background pair, light and dark
+```
+
+The interface also has a real-browser test of the demo build: 44 checks covering the
+acknowledgement gate, the explanations for disabled buttons, locking after approval,
+keyboard use, 44 px targets, readable flag and status contrast in both themes, the phone
+layout (including that nothing covers a flag), and that the session sends nothing
+anywhere. Build the demo, serve it, and run
+`node frontend/e2e/browser-test.mjs <path to chrome> <url> <screenshot folder>`.
 
 ### Speech-to-text engine
 
