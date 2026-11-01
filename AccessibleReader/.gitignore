@@ -2,3 +2,5 @@ node_modules/
 dist/
 .vercel
 .env.local
+docs/e2e-report.json
+e2e/sample.pdf
