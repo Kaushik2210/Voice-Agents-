@@ -21,11 +21,19 @@ test("each sentence remembers its paragraph so the highlight can find it", () =>
   const doc = fromText("Chapter 1\n\nOne. Two.\n\nThree.\n\nChapter 2\n\nFour.");
   const ch = doc.chapters[0];
   assert.deepEqual(ch.flat, [
-    { p: 0, s: 0, text: "One." },
-    { p: 0, s: 1, text: "Two." },
-    { p: 1, s: 0, text: "Three." },
+    { p: 0, s: 0, text: "One.", words: 1 },
+    { p: 0, s: 1, text: "Two.", words: 1 },
+    { p: 1, s: 0, text: "Three.", words: 1 },
   ]);
   assert.equal(ch.sentenceCount, 3);
+});
+
+test("a chapter knows how many words remain from any sentence", () => {
+  const doc = fromText("Chapter 1\n\nOne two three. Four five.\n\nSix.\n\nChapter 2\n\nSeven.");
+  const ch = doc.chapters[0];
+  assert.equal(ch.words, 6);
+  assert.deepEqual(ch.wordsFrom, [6, 3, 1, 0]);
+  assert.equal(doc.chapters[1].words, 1);
 });
 
 test("chapters with nothing to read are dropped", () => {
