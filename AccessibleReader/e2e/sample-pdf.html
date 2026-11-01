@@ -1,0 +1,31 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>The Lighthouse Keeper's Notes</title>
+<style>
+  @page { size: A4; margin: 22mm 20mm; }
+  body { font: 12pt/1.5 Georgia, serif; }
+  h2 { font-size: 20pt; margin: 0 0 14pt; page-break-before: always; }
+  h2:first-of-type { page-break-before: auto; }
+  p { margin: 0 0 10pt; text-align: justify; hyphens: manual; }
+</style></head>
+<body>
+<script>
+  // Original filler prose, different on every page so nothing repeats by accident.
+  const subjects = ["The keeper", "A fishing boat", "The morning fog", "An old ledger", "The brass lamp", "A visiting surveyor", "The harbour cat", "The winter storm"];
+  const verbs = ["watched", "recorded", "carried", "mended", "measured", "outlasted", "followed", "remembered"];
+  const objects = ["the tide tables", "a long line of gulls", "the stairs to the lantern room", "the shifting sandbars", "a letter from the mainland", "the weight of the lamp oil", "the stories told by sailors", "the slow turn of the lens"];
+  const tails = ["before the light failed.", "although nobody asked.", "with great patience.", "as the evening came on.", "and wrote it down.", "while the kettle boiled."];
+  let seed = 7;
+  const pick = (a) => a[(seed = (seed * 1103515245 + 12345) & 0x7fffffff) % a.length];
+  const sentence = () => `${pick(subjects)} ${pick(verbs)} ${pick(objects)} ${pick(tails)}`;
+  const para = () => Array.from({ length: 6 }, sentence).join(" ");
+  const chapters = ["Chapter 1: The Arrival", "Chapter 2: Winter Watch", "Chapter 3: The Surveyor", "Chapter 4: Fog Season", "Chapter 5: The Last Lamp"];
+  for (const [i, title] of chapters.entries()) {
+    document.body.insertAdjacentHTML("beforeend", `<h2>${title}</h2>`);
+    for (let k = 0; k < 9; k++) {
+      let p = para();
+      if (i === 1 && k === 0) p = p.replace("the tide tables", "the informa- tion in the tide tables").replace(/informa- tion/, "informa- tion");
+      document.body.insertAdjacentHTML("beforeend", `<p>${p}</p>`);
+    }
+  }
+</script>
+</body></html>
