@@ -44,6 +44,17 @@ export const NextChapterIcon = () => (
     <path d="M18 5v14M6 6l8 6-8 6z" />
   </svg>
 );
+// Eight-armed asterisk: the brand's small ornament.
+export const AsteriskIcon = ({ size = 28 }) => (
+  <svg {...base} width={size} height={size} strokeWidth="3.2">
+    <path d="M12 2.5v19M2.5 12h19M5.3 5.3l13.4 13.4M18.7 5.3L5.3 18.7" />
+  </svg>
+);
+export const ArrowIcon = () => (
+  <svg {...base} width={16} height={16} strokeWidth="2.4">
+    <path d="M7 17L17 7M8 7h9v9" />
+  </svg>
+);
 export const DisplayIcon = () => (
   <svg {...base}>
     <path d="M4 7h10M18 7h2M4 17h2M10 17h10" />

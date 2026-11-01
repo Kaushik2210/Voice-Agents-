@@ -4,7 +4,7 @@ const KEY = "accessible-reader:prefs";
 
 export const DEFAULTS = {
   theme: "system", // system | light | dark | cream
-  font: "system", // system | readable | serif
+  font: "serif", // system | readable | serif
   size: 1.25, // rem
   lineHeight: 1.7,
   letterSpacing: 0, // em

@@ -12,7 +12,9 @@ function offsets(paragraphs) {
   return out;
 }
 
-export default function ReaderPane({ chapter, current, playing, prefs, onSeek }) {
+const pad = (n) => String(n).padStart(2, "0");
+
+export default function ReaderPane({ chapter, number, total, readTime, current, playing, prefs, onSeek }) {
   const starts = useMemo(() => offsets(chapter.paragraphs), [chapter]);
   const currentRef = useRef(null);
   const top = useRef(null);
@@ -36,6 +38,9 @@ export default function ReaderPane({ chapter, current, playing, prefs, onSeek })
 
   return (
     <article className="reader" style={cssVars(prefs)} data-focus={prefs.focus ? "on" : "off"} data-playing={playing ? "yes" : "no"}>
+      <p className="chapter-eyebrow">
+        {pad(number)} <span aria-hidden="true">/</span> {pad(total)} <span className="dot" aria-hidden="true">·</span> {readTime}
+      </p>
       <h2 ref={top} tabIndex={-1}>
         {chapter.title}
       </h2>

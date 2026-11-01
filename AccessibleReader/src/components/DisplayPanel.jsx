@@ -26,7 +26,7 @@ export default function DisplayPanel({ prefs, onChange, onPreset, onClose }) {
     <aside id="display-panel" className="display-panel" aria-label="Display settings">
       <div className="panel-head">
         <h2>Display</h2>
-        <button type="button" onClick={onClose}>
+        <button type="button" className="pill" onClick={onClose}>
           Done
         </button>
       </div>
@@ -36,10 +36,10 @@ export default function DisplayPanel({ prefs, onChange, onPreset, onClose }) {
       </p>
 
       <div className="presets">
-        <button type="button" onClick={() => onPreset("standard")}>
+        <button type="button" className="outline" onClick={() => onPreset("standard")}>
           Standard
         </button>
-        <button type="button" onClick={() => onPreset("roomy")}>
+        <button type="button" className="outline" onClick={() => onPreset("roomy")}>
           Roomy and calm
         </button>
       </div>

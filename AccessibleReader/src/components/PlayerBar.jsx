@@ -4,7 +4,7 @@ import { NextChapterIcon, NextSentenceIcon, PauseIcon, PlayIcon, PrevChapterIcon
 const RATES = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3];
 
 export default function PlayerBar({
-  supported, playing, sentence, sentenceCount, chapter, chapterCount,
+  supported, playing, sentence, sentenceCount, chapter, chapterCount, timeLeft,
   rate, voices, voiceURI, error,
   onToggle, onPrev, onNext, onPrevChapter, onNextChapter, onRate, onVoice,
 }) {
@@ -41,18 +41,24 @@ export default function PlayerBar({
           </button>
         </div>
 
+        <p className="where" aria-label="Position">
+          <strong>
+            Chapter {chapter + 1} of {chapterCount}
+          </strong>
+          <span className="muted">
+            {" "}
+            · sentence {Math.min(sentence + 1, sentenceCount)} of {sentenceCount}
+            <span className="left"> · {timeLeft}</span>
+          </span>
+        </p>
+
         <button type="button" className="more-toggle" aria-expanded={more} aria-controls="player-pickers" onClick={() => setMore((m) => !m)}>
           Speed, voice
         </button>
 
-        <p className="where" aria-label="Position">
-          Chapter {chapter + 1} of {chapterCount}
-          <span className="muted"> · sentence {Math.min(sentence + 1, sentenceCount)} of {sentenceCount}</span>
-        </p>
-
         <div id="player-pickers" className={more ? "pickers show" : "pickers"}>
-          <label>
-            <span>Speed</span>
+          <label className="pill-select">
+            <span className="cap">Speed</span>
             <select value={rate} onChange={(e) => onRate(Number(e.target.value))} disabled={!supported}>
               {RATES.map((r) => (
                 <option key={r} value={r}>
@@ -61,8 +67,8 @@ export default function PlayerBar({
               ))}
             </select>
           </label>
-          <label>
-            <span>Voice</span>
+          <label className="pill-select">
+            <span className="cap">Voice</span>
             <select value={voiceURI ?? ""} onChange={(e) => onVoice(e.target.value || null)} disabled={!supported || voices.length === 0}>
               <option value="">Default</option>
               {voices.map((v) => (

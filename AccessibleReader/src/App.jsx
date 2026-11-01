@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ChapterNav from "./components/ChapterNav.jsx";
 import DisplayPanel from "./components/DisplayPanel.jsx";
-import { DisplayIcon } from "./components/Icons.jsx";
+import { AsteriskIcon, DisplayIcon } from "./components/Icons.jsx";
 import OpenPanel from "./components/OpenPanel.jsx";
 import PlayerBar from "./components/PlayerBar.jsx";
 import ReaderPane from "./components/ReaderPane.jsx";
@@ -11,6 +11,7 @@ import { PRESETS, loadPrefs, savePrefs } from "./lib/prefs.js";
 import { clampPosition, loadPosition, savePosition } from "./lib/progress.js";
 import { SAMPLE_TEXT, SAMPLE_TITLE } from "./lib/sample.js";
 import { browserEngine, loadVoices, sortVoices, speechSupported } from "./lib/speech.js";
+import { leftLabel, lengthLabel, minutesFor } from "./lib/time.js";
 
 const MAX_FILE_MB = 80;
 const INTERACTIVE = "input, textarea, select, button, a, summary, [contenteditable='true']";
@@ -208,24 +209,34 @@ export default function App() {
   }, [player, goChapter, patchPrefs, prefs.rate]);
 
   const current = doc?.chapters[chapter];
+  const progress = current ? Math.round(((playback.index + 1) / Math.max(1, current.sentenceCount)) * 100) : 0;
+  const timeLeft = current ? leftLabel(minutesFor(current.wordsFrom[Math.min(playback.index, current.sentenceCount)] ?? 0, prefs.rate)) : "";
 
   return (
     <div className="app">
       <header className="top">
-        <h1>
-          <a href="./" onClick={(e) => { if (doc) { e.preventDefault(); closeDoc(); } }}>Accessible Reader</a>
+        <h1 className="brand">
+          <a href="./" onClick={(e) => { if (doc) { e.preventDefault(); closeDoc(); } }}>
+            <span className="brand-star" aria-hidden="true"><AsteriskIcon size={18} /></span>
+            Accessible <em>Reader</em>
+          </a>
         </h1>
         {doc && <p className="doc-title" title={doc.title}>{doc.title}</p>}
         <div className="top-actions">
           {doc && (
-            <button type="button" onClick={closeDoc}>
+            <button type="button" className="textlink" onClick={closeDoc}>
               Open another
             </button>
           )}
-          <button type="button" className="with-icon" aria-expanded={showDisplay} aria-controls="display-panel" onClick={() => setShowDisplay((s) => !s)}>
+          <button type="button" className="pill with-icon" aria-expanded={showDisplay} aria-controls="display-panel" onClick={() => setShowDisplay((s) => !s)}>
             <DisplayIcon /> Display
           </button>
         </div>
+        {doc && (
+          <div className="meter" role="progressbar" aria-label="Progress through this chapter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>
+            <span style={{ width: `${progress}%` }} />
+          </div>
+        )}
       </header>
 
       <p className="sr-only" role="status" aria-live="polite">
@@ -240,26 +251,37 @@ export default function App() {
         {doc && current && (
           <>
             <ChapterNav chapters={doc.chapters} current={chapter} onSelect={goChapter} />
-            <ReaderPane chapter={current} current={playback.index} playing={playback.playing} prefs={prefs} onSeek={seekAndPlay} />
+            <div className="reader-col">
+              <ReaderPane
+                chapter={current}
+                number={chapter + 1}
+                total={doc.chapters.length}
+                readTime={lengthLabel(minutesFor(current.words, prefs.rate))}
+                current={playback.index}
+                playing={playback.playing}
+                prefs={prefs}
+                onSeek={seekAndPlay}
+              />
+              <details className="help">
+                <summary>Keyboard shortcuts and screen readers</summary>
+                <ul>
+                  <li><kbd>Space</kbd> play or pause</li>
+                  <li><kbd>←</kbd> <kbd>→</kbd> previous or next sentence</li>
+                  <li><kbd>[</kbd> <kbd>]</kbd> previous or next chapter</li>
+                  <li><kbd>-</kbd> <kbd>+</kbd> slower or faster</li>
+                  <li>Click any sentence to start reading from it.</li>
+                </ul>
+                <p>
+                  Using a screen reader? Leave read-aloud paused and let your screen reader read the page: two voices at once is confusing.
+                </p>
+              </details>
+            </div>
           </>
         )}
       </main>
 
       {doc && current && (
         <>
-          <details className="help">
-            <summary>Keyboard shortcuts and screen readers</summary>
-            <ul>
-              <li><kbd>Space</kbd> play or pause</li>
-              <li><kbd>←</kbd> <kbd>→</kbd> previous or next sentence</li>
-              <li><kbd>[</kbd> <kbd>]</kbd> previous or next chapter</li>
-              <li><kbd>-</kbd> <kbd>+</kbd> slower or faster</li>
-              <li>Click any sentence to start reading from it.</li>
-            </ul>
-            <p>
-              Using a screen reader? Leave read-aloud paused and let your screen reader read the page: two voices at once is confusing.
-            </p>
-          </details>
           <PlayerBar
             supported={supported}
             playing={playback.playing}
@@ -267,6 +289,7 @@ export default function App() {
             sentenceCount={current.sentenceCount}
             chapter={chapter}
             chapterCount={doc.chapters.length}
+            timeLeft={timeLeft}
             rate={prefs.rate}
             voices={voices}
             voiceURI={prefs.voiceURI}
