@@ -7,9 +7,11 @@ to suit you. It runs entirely in the browser: the file is never uploaded.
 **Live: https://accessible-reader-three.vercel.app** (try the short sample, or open
 one of your own files)
 
+![The landing page: a large serif headline, a preview of the reader, and the choices for opening a file](docs/screenshots/open.png)
+
 | | |
 |---|---|
-| ![The reader in a light theme, with the current sentence highlighted](docs/screenshots/reading.png) | ![The reader in a dark theme with the Display panel open](docs/screenshots/reading-dark.png) |
+| ![The reader in the light theme, with the current sentence highlighted](docs/screenshots/reading.png) | ![The reader in the dark theme with the Display panel open](docs/screenshots/reading-dark.png) |
 | ![The Display panel in the cream theme](docs/screenshots/display-panel.png) | ![The reader on a phone](docs/screenshots/mobile.png) |
 
 ## What it does
@@ -21,6 +23,9 @@ one of your own files)
 - **Reads aloud** with the browser's own speech engine, sentence by sentence.
   Click any sentence to start from it. Pause, skip a sentence or a chapter, change
   the speed and pick a voice. Reading carries on into the next chapter by itself.
+- **Shows where you are**: a progress line through the chapter, an "about 3 min
+  left" estimate that follows your chosen speed, and a reading time for each
+  chapter. These are estimates, so they say "about".
 - **Remembers your place** in each document, and your display settings, in the
   browser on your device.
 - **Adjusts the page**: text size, line spacing, letter and word spacing, line
@@ -75,11 +80,20 @@ file ──► pdf.js text fragments with positions        (PDF only)
 - A cancelled utterance fires its end event late, so every call gets a run number
   and callbacks from an earlier run are ignored.
 - The PDF library is loaded only when a PDF is opened, so the main bundle is
-  168 KB (56 KB gzipped).
+  173 KB (57 KB gzipped).
 
 ## Design
 
-Built to follow Apple's Human Interface Guidelines, translated for the web:
+**Visual direction.** An editorial look: one confident accent (ultramarine) on
+clean paper, a refined serif for display type against a plain grotesk for the
+interface, tiny uppercase labels, hairline rules, a numbered chapter index, pill
+controls and a small spinning asterisk as an ornament. It takes its cue from the
+restrained gallery style of [Site of Sites](https://www.siteofsites.co/). Those
+are ideas only; no code, images or fonts were taken from it. The headings use
+system serif fonts (Iowan Old Style, Palatino or Georgia, whichever the device
+has), so the exact look varies a little between devices.
+
+The structure follows Apple's Human Interface Guidelines, translated for the web:
 
 - **Layout:** a split view with chapters as a sidebar and a distraction-free
   reading pane, collapsing to one column on narrow screens. Controls sit in a
@@ -87,9 +101,11 @@ Built to follow Apple's Human Interface Guidelines, translated for the web:
 - **Typography:** `rem` units that respect the browser's text size, text that is
   never justified, adjustable line length, and a typeface option with wide, open
   letterforms.
-- **Colour:** semantic theme variables, a light, dark and warm cream theme, and
-  dimmed text in focus mode kept above the 4.5:1 contrast ratio. That is computed
-  in the browser test for both the dark and cream themes.
+- **Colour:** semantic theme variables for a light, dark and warm cream theme.
+  A unit test reads the real colours from the stylesheet and checks that every
+  text and background pair, in every theme, is at least 4.5:1, so a colour cannot
+  be changed without that being rechecked. Dimmed text in focus mode is held to
+  the same standard, in the unit test and again in the browser.
 - **Input:** every control is at least 44 px, focus is always visible, nothing
   depends on hover, and there are keyboard shortcuts: Space to play or pause, the
   arrow keys for sentences, `[` and `]` for chapters, `-` and `+` for speed. Space
@@ -108,13 +124,14 @@ who rely on them. Treat the accessibility claims as "built to the guidance", not
 
 ```bash
 npm install
-npm test                         # 53 unit tests, Node's built-in runner, no browser
+npm test                         # 68 unit tests, Node's built-in runner, no browser
 ```
 
 The unit tests cover the parts most likely to be subtly wrong: sentence splitting
 ("Dr. Smith", "3.5 mg", "J. K. Rowling"), chapter detection, rebuilding paragraphs
 from PDF positions, the playback controller (including late events from cancelled
-speech), and saved position and preferences.
+speech), saved position and preferences, reading-time estimates, and the colour contrast
+of every theme.
 
 A second test drives the built site in a real Chrome and makes 47 checks: opening
 the sample and a real multi-page PDF, chapters found from its headings,
@@ -143,6 +160,8 @@ node e2e/browser-test.mjs "<path to chrome>" http://localhost:4174/ docs/screens
   caught.
 - **A duplicated status message** read "Chapter 3: Chapter 3: Your files stay with
   you".
+- **"About under a minute left"** appeared in the redesign. Spotted in a
+  screenshot, then fixed and tested so the labels can never combine those words.
 - **The phone player bar covered most of the text.** It is now two compact rows,
   with speed and voice behind a toggle.
 

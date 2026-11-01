@@ -4,3 +4,5 @@ dist/
 .env.local
 docs/e2e-report.json
 e2e/sample.pdf
+docs/screenshots/mobile-options.png
+docs/screenshots/reading-roomy.png
