@@ -90,7 +90,7 @@ await shot("open.png");
 await clickText("Try the short sample");
 await sleep(600);
 check("sample opens with 3 chapters", (await js(`document.querySelectorAll('.chapters li').length`)) === 3);
-check("first chapter is selected", await js(`document.querySelector('.chapters li button[aria-current="true"]')?.textContent.startsWith('Chapter 1')`));
+check("first chapter is selected", await js(`document.querySelector('.chapters li button[aria-current="true"] .ch-title')?.textContent.startsWith('Chapter 1')`));
 check("title shown", await js(`document.querySelector('.doc-title')?.textContent`) === "A short tour of Accessible Reader");
 check("tricky sentences stay whole (Dr. / 0.8 / J. K.)", await js(`(() => { const t = [...document.querySelectorAll('.sentence')].map(s => s.textContent.trim()); return t.some(s => s.startsWith('Dr. Okafor, who studies')) && t.some(s => s.includes('0.8 times normal speed')); })()`));
 check("voices offered", (await js(`document.querySelectorAll('.pickers select')[1].options.length`)) >= 2);
@@ -118,8 +118,8 @@ check("space on a focused button presses the button instead of toggling twice",
 await js(`window.__keys = []; window.addEventListener('keydown', (e) => window.__keys.push(e.key), true);`);
 await key("]");
 await sleep(300);
-check("] moves to chapter 2", await js(`document.querySelector('.chapters li button[aria-current="true"]')?.textContent.startsWith('Chapter 2')`),
-  await js(`({ keys: window.__keys, active: document.activeElement?.tagName + '.' + document.activeElement?.className, current: document.querySelector('.chapters li button[aria-current="true"]')?.textContent, status: document.querySelector('[role=status]').textContent, playing: document.querySelector('.play').getAttribute('aria-label') })`));
+check("] moves to chapter 2", await js(`document.querySelector('.chapters li button[aria-current="true"] .ch-title')?.textContent.startsWith('Chapter 2')`),
+  await js(`({ keys: window.__keys, active: document.activeElement?.tagName + '.' + document.activeElement?.className, current: document.querySelector('.chapters li button[aria-current="true"] .ch-title')?.textContent, status: document.querySelector('[role=status]').textContent, playing: document.querySelector('.play').getAttribute('aria-label') })`));
 check("the chapter heading is shown", (await js(`document.querySelector('.reader h2')?.textContent`)).startsWith("Chapter 2"));
 
 // click a sentence = read from there
@@ -129,7 +129,7 @@ check("clicking a sentence starts reading from it", Number(await js(`document.qu
 await key(" ");
 
 // reading to the end of a chapter carries on into the next
-await clickText("Chapter 2");
+await js(`document.querySelectorAll('.chapters li button')[1].click()`);
 await js(`document.querySelectorAll('.chapters li button')[0].click()`);
 await sleep(200);
 const spokenBefore = await js(`window.__spoken.length`);
@@ -138,7 +138,7 @@ await key(" ");
 let moved = false;
 for (let i = 0; i < 30 && !moved; i++) {
   await sleep(250);
-  moved = !(await js(`document.querySelector('.chapters li button[aria-current="true"]')?.textContent`)).startsWith("Chapter 1");
+  moved = !(await js(`document.querySelector('.chapters li button[aria-current="true"] .ch-title')?.textContent`)).startsWith("Chapter 1");
 }
 check("reading runs off the end of a chapter and carries on into the next by itself", moved);
 check("it was still playing after the hand-over", (await js(`document.querySelector('.play').getAttribute('aria-label')`)) === "Pause");
@@ -205,7 +205,7 @@ await sleep(1500);
 check("the display settings survive a reload", (await js(`document.documentElement.getAttribute('data-theme')`)) === "light");
 await clickText("Try the short sample");
 await sleep(600);
-check("the reader picks up in chapter 3 after a reload", await js(`document.querySelector('.chapters li button[aria-current="true"]')?.textContent.startsWith('Chapter 3')`));
+check("the reader picks up in chapter 3 after a reload", await js(`document.querySelector('.chapters li button[aria-current="true"] .ch-title')?.textContent.startsWith('Chapter 3')`));
 check("and tells assistive tech so", /Picked up where you left off/.test(await js(`document.querySelector('[role=status]').textContent`)));
 
 // ---- 6. narrow screen -------------------------------------------------------
@@ -239,7 +239,7 @@ if (pdfPath && existsSync(pdfPath)) {
   for (let i = 0; i < 60 && !ready; i++) { await sleep(500); ready = await js(`document.querySelectorAll('.chapters li').length > 0`); }
   check("a real PDF opens", ready);
   if (ready) {
-    const titles = await js(`[...document.querySelectorAll('.chapters li')].map(l => l.textContent.trim())`);
+    const titles = await js(`[...document.querySelectorAll('.chapters li .ch-title')].map(l => l.textContent.trim())`);
     check("PDF chapters are found from its headings", titles.length >= 4 && titles.some((t) => /^Chapter 2/.test(t)), titles);
     const text = await js(`document.querySelector('.reader').textContent`);
     check("PDF text is readable prose", /\w+ \w+ \w+/.test(text) && text.length > 200, text.slice(0, 80));
