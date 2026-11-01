@@ -55,6 +55,29 @@ test("body text that only differs by a number is never mistaken for a header", (
   });
 });
 
+test("a footer that is truncated differently on one page is still recognised", () => {
+  // Seen in a real Chrome-made PDF: the file path in the footer was cut one character
+  // sooner on page 10, where the page number is wider.
+  const footer = (n) => (n === 10 ? "file:///c:/users/kaushik/appdata/local/temp/make-pdf… 10/10" : "file:///c:/users/kaushik/appdata/local/temp/make-pdfs… " + n + "/10");
+  const pages = Array.from({ length: 10 }, (_, k) => [line("Annual Report", 819), ...prose((k % 4) + 1), line(footer(k + 1), 16)]);
+  const cleaned = removeRunningHeads(pages);
+  assert.ok(cleaned.every((lines) => lines.every((l) => !l.text.startsWith("file:"))), "every footer removed, including the odd one");
+  assert.ok(cleaned.every((lines) => lines.length === 4), "and only the footers and header were removed");
+});
+
+test("different text at the same height is not a running header", () => {
+  // Every page starts its text at the same height, but with different words.
+  const pages = [1, 2, 3, 4].map((n) => [line(`Opening words number ${["alpha", "beta", "gamma", "delta"][n - 1]} appear here`, 767), ...prose(n)]);
+  const cleaned = removeRunningHeads(pages);
+  assert.ok(cleaned.every((lines, i) => lines[0].text === pages[i][0].text), "the first line of each page survives");
+});
+
+test("two short different lines at the same height are not merged", () => {
+  const pages = ["A", "B", "C", "D"].map((t) => [line(t, 780), ...prose(1), line("end", 40)]);
+  const cleaned = removeRunningHeads(pages);
+  assert.ok(cleaned.every((lines, i) => lines[0].text === ["A", "B", "C", "D"][i]));
+});
+
 test("a number line in the middle of a page is kept", () => {
   const pages = [1, 2, 3].map(() => [line("A", 780), line("B", 760), line("7", 700), line("C", 680), line("D", 40), line("E", 20)]);
   assert.ok(removeRunningHeads(pages).every((lines) => lines.some((l) => l.text === "7")));
