@@ -11,3 +11,4 @@ dist/
 *.mp3
 *.m4a
 *.webm
+docs/e2e-report.json
