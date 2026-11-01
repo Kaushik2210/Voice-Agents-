@@ -4,6 +4,9 @@ Open a PDF, a text file or some pasted text, and have it read aloud one sentence
 at a time, with the sentence being spoken highlighted and a page you can adjust
 to suit you. It runs entirely in the browser: the file is never uploaded.
 
+**Live: https://accessible-reader-three.vercel.app** (try the short sample, or open
+one of your own files)
+
 | | |
 |---|---|
 | ![The reader in a light theme, with the current sentence highlighted](docs/screenshots/reading.png) | ![The reader in a dark theme with the Display panel open](docs/screenshots/reading-dark.png) |
@@ -36,7 +39,8 @@ rather than just saying it:
   page is not allowed to open a connection to any other site.
 - The browser test records every network request during a full session, including
   opening a real PDF, and fails if any goes to another origin or carries a request
-  body. In the last run there were 8 requests, all to the site's own origin.
+  body. The same test was run against the live site: 8 requests, all to the site's
+  own origin.
 
 Your place in a document and your display settings are stored in `localStorage` on
 your device. There are no accounts, no analytics and no cookies.
